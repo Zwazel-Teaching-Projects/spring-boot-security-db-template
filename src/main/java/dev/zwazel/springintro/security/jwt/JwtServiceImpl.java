@@ -30,6 +30,9 @@ public class JwtServiceImpl implements JwtService {
     @Value("${jwt.cookie-name}")
     private String jwtCookieName;
 
+    @Value("${jwt.cookie-max-age}")
+    private long jwtCookieMaxAge;
+
     @Override
     public String extractUserName(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -95,7 +98,7 @@ public class JwtServiceImpl implements JwtService {
     public ResponseCookie generateJwtCookie(String jwt) {
         return ResponseCookie.from(jwtCookieName, jwt)
                 .path("/")
-                .maxAge(24 * 60 * 60) // 24 hours
+                .maxAge(jwtCookieMaxAge)
                 .httpOnly(true)
                 .secure(true)
                 .sameSite("Strict")
