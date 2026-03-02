@@ -42,14 +42,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
+        // Try to get JWT from cookie first, then from Authorization header
+        String jwt = jwtService.getJwtFromCookies(request);
         final String authHeader = request.getHeader("Authorization");
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ") || request.getRequestURI().contains("/auth")) {
+        if ((jwt == null && (authHeader == null || !authHeader.startsWith("Bearer "))) || request.getRequestURI().contains("/auth")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        String jwt = authHeader.substring(7); // Extract token after "Bearer "
+        // If JWT is not in cookie but in Authorization header, extract it
+        if (jwt == null && authHeader.startsWith("Bearer ")) {
+            jwt = authHeader.substring(7); // Extract token after "Bearer "
+        }
 
         final String userEmail = jwtService.extractUserName(jwt);
         /*
