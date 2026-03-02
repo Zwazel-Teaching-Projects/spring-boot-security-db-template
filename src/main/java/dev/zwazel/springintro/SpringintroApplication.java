@@ -1,5 +1,8 @@
 package dev.zwazel.springintro;
 
+import dev.zwazel.springintro.security.auth.AuthenticationController;
+import dev.zwazel.springintro.security.config.ApplicationSecurityConfig;
+import dev.zwazel.springintro.security.config.SecurityConfiguration;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 

@@ -1,5 +1,6 @@
 package dev.zwazel.springintro.security.jwt;
 
+import dev.zwazel.springintro.security.config.JwtAuthenticationFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.userdetails.UserDetails;

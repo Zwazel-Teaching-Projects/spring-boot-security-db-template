@@ -1,6 +1,8 @@
 package dev.zwazel.springintro.security.auth.payload;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import dev.zwazel.springintro.security.Role;
+import dev.zwazel.springintro.security.auth.AuthenticationController;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

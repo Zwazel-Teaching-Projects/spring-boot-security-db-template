@@ -1,6 +1,7 @@
 package dev.zwazel.springintro.security.auth.payload;
 
 import dev.zwazel.springintro.security.Role;
+import dev.zwazel.springintro.security.auth.AuthenticationController;
 import dev.zwazel.springintro.validation.password.StrongPassword;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

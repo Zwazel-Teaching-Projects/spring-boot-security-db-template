@@ -1,5 +1,6 @@
 package dev.zwazel.springintro.security;
 
+import dev.zwazel.springintro.user.User;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;

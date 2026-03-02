@@ -1,5 +1,7 @@
 package dev.zwazel.springintro.security;
 
+import dev.zwazel.springintro.security.config.CustomAccessDeniedHandler;
+import dev.zwazel.springintro.security.config.Http401UnauthorizedEntryPoint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

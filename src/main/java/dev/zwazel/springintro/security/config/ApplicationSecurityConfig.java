@@ -1,5 +1,8 @@
 package dev.zwazel.springintro.security.config;
 
+import dev.zwazel.springintro.security.auth.AuthenticationServiceImpl;
+import dev.zwazel.springintro.security.auth.payload.RegisterRequest;
+import dev.zwazel.springintro.user.User;
 import dev.zwazel.springintro.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;

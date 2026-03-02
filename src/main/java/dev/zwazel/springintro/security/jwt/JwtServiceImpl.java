@@ -1,5 +1,6 @@
 package dev.zwazel.springintro.security.jwt;
 
+import dev.zwazel.springintro.security.config.JwtAuthenticationFilter;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;

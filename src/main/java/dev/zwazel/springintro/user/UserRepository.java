@@ -1,6 +1,8 @@
 package dev.zwazel.springintro.user;
 
+import dev.zwazel.springintro.security.config.ApplicationSecurityConfig;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.security.core.userdetails.UserDetailsService;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -48,7 +50,7 @@ import java.util.UUID;
  * List<User> findAll();                    // Get all users
  * void delete(User user);                  // Delete user
  * long count();                            // Count total users
- * 
+ *
  * // Pagination
  * Page<User> findAll(Pageable pageable);   // Get users with pagination
  * </pre>
@@ -108,11 +110,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      *
      * @param email The email address to search for. Must not be null.
      * @return {@code Optional<User>} containing the user if found, or empty if not found.
-     *         Never returns null (always returns Optional object).
-     *
-     * @throws org.springframework.data.repository.query.QueryExecutionException
-     *         if database query fails (e.g., connection error)
-     *
+     * Never returns null (always returns Optional object).
      * @see User - Entity with email field
      * @see ApplicationSecurityConfig#userDetailsService() - Where this is used
      * @see org.springframework.security.core.userdetails.UsernameNotFoundException
