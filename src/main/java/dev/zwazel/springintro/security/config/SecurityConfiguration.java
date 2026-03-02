@@ -1,5 +1,6 @@
 package dev.zwazel.springintro.security.config;
 
+import dev.zwazel.springintro.security.auth.AuthenticationController;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,23 +15,94 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 import static org.springframework.security.config.http.SessionCreationPolicy.STATELESS;
 
-// Security Configuration - Defines filter chain and authorization rules
-
 /**
  * Spring Security configuration class that defines the security filter chain and authorization rules.
  *
- * <h2>Purpose</h2>
- * This class configures how Spring Security processes HTTP requests:
+ * <p>This class configures how Spring Security processes HTTP requests, including which endpoints
+ * require authentication, which roles are needed for specific endpoints, and how to handle errors.</p>
+ *
+ * <h2>Key Responsibilities:</h2>
  * <ul>
- *   <li>Which endpoints require authentication and which are public</li>
- *   <li>Which roles are needed for specific endpoints</li>
- *   <li>How to handle authentication failures and permission denials</li>
- *   <li>Which filters to apply and in what order</li>
- *   <li>Session management policy (stateless vs. stateful)</li>
+ *   <li>Define which endpoints are public vs protected</li>
+ *   <li>Configure role-based access control for specific endpoints</li>
+ *   <li>Handle authentication and authorization failures with custom JSON responses</li>
+ *   <li>Configure the JWT authentication filter in the filter chain</li>
+ *   <li>Set up stateless session management for REST API</li>
  * </ul>
  *
- * <h2>Annotations Explained</h2>
- * <ul>
- *   <li><b>{@code @Configuration}</b>: Marks this as a Spring configuration class.
- *       Spring discovers and processes it during application startup.</li>\n   *   <li><b>{@code @EnableWebSecurity}</b>: Enables Spring Security's web security features.
- *       Without this, security config is not applied to HTTP requests.</li>\n   *   <li><b>{@code @RequiredArgsConstructor}</b>: Lombok annotation generating constructor\n *       for all final fields (dependency injection from Spring container).</li>\n   *   <li><b>{@code @EnableMethodSecurity}</b>: Enables method-level security via\n *       {@code @PreAuthorize}, {@code @PostAuthorize}, {@code @Secured} annotations.\n       Allows fine-grained authorization on individual controller methods.</li>\n * </ul>\n *\n * <h2>Dependency Injection</h2>\n * Four critical beans injected and used in filter chain configuration:\n * <ul>\n *   <li><b>jwtAuthenticationFilter</b>: Custom filter that validates JWT tokens\n *       ({@link JwtAuthenticationFilter}). Runs before standard authentication filter.</li>\n *   <li><b>authenticationProvider</b>: Built-in bean that handles credential verification\n       (password checking) during login. Uses DaoAuthenticationProvider (database-backed).</li>\n   *   <li><b>unauthorizedEntryPoint</b>: Custom handler for HTTP 401 (authentication required)\n       ({@link Http401UnauthorizedEntryPoint}). Triggered when unauthenticated request\n       accesses protected resource.</li>\n   *   <li><b>accessDeniedHandler</b>: Custom handler for HTTP 403 (permission denied)\n       ({@link CustomAccessDeniedHandler}). Triggered when authenticated user lacks permission.</li>\n * </ul>\n *\n * <h2>Security Filter Chain Execution Flow</h2>\n * <pre>\n * HTTP REQUEST\n *    ↓\n * Standard Spring Security Filters (14+ built-in)\n *    ↓\n * JwtAuthenticationFilter (CUSTOM - runs BEFORE UsernamePasswordAuthenticationFilter)\n *    STEP 1: Extract JWT from cookie or Authorization header\n *    STEP 2: Validate signature and expiration\n *    STEP 3: Load user details and create authentication token\n *    STEP 4: Set in SecurityContextHolder for use by authorization rules\n *    ↓\n * Authorization Matcher (requestMatchers rules evaluate here)\n *    STEP 1: Check if endpoint requires authentication\n *    STEP 2: Check if user has required role/permission\n *    STEP 3: Allow or deny based on rules\n *    ↓\n * Controller Method / Handler (if authorized)\n *    ↓\n * HTTP RESPONSE\n * </pre>\n *\n * <h2>Key Configuration Sections</h2>\n * See {@link #securityFilterChain(HttpSecurity)} for detailed implementation.\n *\n * @see JwtAuthenticationFilter - JWT token extraction and validation\n * @see Http401UnauthorizedEntryPoint - Authentication failure handling\n * @see CustomAccessDeniedHandler - Authorization failure handling\n */\n@Configuration\n@EnableWebSecurity\n@RequiredArgsConstructor\n@EnableMethodSecurity\npublic class SecurityConfiguration {\n\n    private final JwtAuthenticationFilter jwtAuthenticationFilter;\n    private final AuthenticationProvider authenticationProvider;\n    private final Http401UnauthorizedEntryPoint unauthorizedEntryPoint;\n    private final CustomAccessDeniedHandler accessDeniedHandler;\n\n    /**\n     * Configures the Spring Security filter chain and authorization rules.\n     *\n     * <h3>Configuration Steps</h3>\n     * <ol>\n     *   <li><b>CSRF Disabled</b>: {@code csrf(AbstractHttpConfigurer::disable)}\n     *       <ul>\n     *         <li>CSRF (Cross-Site Request Forgery) protection disabled because this is\n     *             a stateless REST API using JWT tokens, not traditional sessions/cookies.</li>\n     *         <li>CSRF protection is primarily needed for form-based (stateful) web apps\n     *             where server tracks session cookies.</li>\n     *         <li>JWT tokens are stateless and checked by server on every request\n     *             (no CSRF vulnerability because attacker can't forge valid JWT signature).</li>\n     *         <li>If you add session-based features later, re-enable CSRF protection.</li>\n     *       </ul>\n     *   </li>\n     *   <li><b>Exception Handling</b>: {@code exceptionHandling(exception -> ...)}\n     *       <ul>\n     *         <li>Defines custom handlers for authentication and authorization failures.</li>\n     *         <li>{@code authenticationEntryPoint(unauthorizedEntryPoint)}: HTTP 401\n     *             when user not authenticated or token invalid/expired.\n     *             Returns JSON error response instead of default Spring Security page.</li>\n     *         <li>{@code accessDeniedHandler(accessDeniedHandler)}: HTTP 403\n     *             when user authenticated but lacks required role/permission.\n     *             Also returns custom JSON error response.</li>\n     *       </ul>\n     *   </li>\n     *   <li><b>Authorization Rules</b>: {@code authorizeHttpRequests(request -> ...)}\n     *       <ul>\n     *         <li>Defines which endpoints require what level of access.\n     *             Rules are evaluated top-to-bottom; first match applies.</li>\n     *         <li>See step-by-step breakdown below.</li>\n     *       </ul>\n     *   </li>\n     *   <li><b>Session Policy</b>: {@code sessionManagement(manager -> ...)}\n     *       <ul>\n     *         <li>{@code STATELESS} means server doesn't create or track sessions.</li>\n     *         <li>Each request is independent; JWT token carries all needed auth info.</li>\n     *         <li>No JSESSIONID cookie, no login session timeout (only JWT expiration).</li>\n     *         <li>Enables horizontal scaling (multiple servers don't need shared session store).</li>\n     *       </ul>\n     *   </li>\n     *   <li><b>Authentication Provider</b>: {@code authenticationProvider(authenticationProvider)}\n     *       <ul>\n     *         <li>Sets the provider responsible for verifying credentials during login\n     *         (specifically, in AuthenticationManager.authenticate() calls).</li>\n     *         <li>Default provider loads user from database (via UserDetailsService) and\n     *             compares password using bcrypt.</li>\n     *       </ul>\n     *   </li>\n     *   <li><b>Filter Order</b>: {@code addFilterBefore(jwtAuthenticationFilter, ...)}\n     *       <ul>\n     *         <li>Inserts custom JWT filter BEFORE the standard UsernamePasswordAuthenticationFilter.</li>\n     *         <li>This ensures JWT is extracted and validated on every request, even if\n     *             no form-based login is used.</li>\n     *         <li>Filter order matters: JWT validation must happen before authorization checks.</li>\n     *       </ul>\n     *   </li>\n     * </ol>\n     *\n     * <h3>Authorization Rules in Detail</h3>\n     * Rules are evaluated top-to-bottom; first match applies:\n     *\n     * <h4>Rule 1: Public Endpoints</h4>\n     * <pre>\n     * request.requestMatchers(\"/error\", \"/api/v1/auth/**\").permitAll()\n     * </pre>\n     * <ul>\n     *   <li><b>Endpoints</b>:\n     *       <ul>\n     *         <li>{@code /error}: Spring's default error endpoint (5xx, 4xx responses)</li>\n     *         <li>{@code /api/v1/auth/**}: All auth endpoints (register, authenticate, logout)</li>\n     *       </ul>\n     *   </li>\n     *   <li><b>Access</b>: {@code permitAll()} = No authentication required</li>\n     *   <li><b>Who Can Access</b>: Anyone (authenticated or not)</li>\n     *   <li><b>Typical Use Cases</b>: Public registration/login, public APIs, error pages</li>\n     * </ul>\n     *\n     * <h4>Rule 2: Admin-Only Resource Creation</h4>\n     * <pre>\n     * request.requestMatchers(HttpMethod.POST, \"/api/v1/resource\").hasRole(\"ADMIN\")\n     * </pre>\n     * <ul>\n     *   <li><b>Endpoint</b>: POST requests to {@code /api/v1/resource} (create new resource)</li>\n     *   <li><b>Access</b>: {@code hasRole(\"ADMIN\")} = Only ADMIN role allowed</li>\n     *   <li><b>Who Can Access</b>: Authenticated users with ADMIN role</li>\n     *   <li><b>Note</b>: Non-admin users or unauthenticated users get HTTP 403 Forbidden</li>\n     *   <li><b>Authentication Status</b>:\n     *       <ul>\n     *         <li>If no JWT token: HTTP 401 Unauthorized (authentication required first)</li>\n     *         <li>If JWT token but USER role: HTTP 403 Forbidden (insufficient permissions)</li>\n     *       </ul>\n     *   </li>\n     * </ul>\n     *\n     * <h4>Rule 3: Catch-All (Default)</h4>\n     * <pre>\n     * request.anyRequest().authenticated()\n     * </pre>\n     * <ul>\n     *   <li><b>Endpoints</b>: All other endpoints not matched by rules above</li>\n     *   <li><b>Access</b>: {@code authenticated()} = Token required, no role check</li>\n     *   <li><b>Who Can Access</b>: Any authenticated user (USER or ADMIN role)\n     *       can access, but both have same permissions (no role-specific logic at HTTP level).</li>\n     *   <li><b>Authorization Flow</b>:\n     *       <ul>\n     *         <li>If no JWT token: HTTP 401 Unauthorized</li>\n     *         <li>If valid JWT token: HTTP 200 OK (passed to controller method)</li>\n     *         <li>Additional role checks can happen via {@code @PreAuthorize} annotations\n     *             on controller methods (method-level security).</li>\n     *       </ul>\n     *   </li>\n     * </ul>\n     *\n     * <h3>Authorization Flow Example</h3>\n     *\n     * <h4>Example 1: Register New User (Public)</h4>\n     * <pre>\n     * POST /api/v1/auth/register\n     * No JWT token required\n     *\n     * Rule Check: \"/api/v1/auth/**\" matches ✓\n     * Result: permitAll() -> Allowed\n     * Response: HTTP 200 OK, returns JWT token\n     * </pre>\n     *\n     * <h4>Example 2: Create Resource as ADMIN</h4>\n     * <pre>\n     * POST /api/v1/resource\n     * JWT token with ADMIN role included\n     *\n     * Rule Check 1: \"/error\" and \"/api/v1/auth/**\" don't match\n     * Rule Check 2: POST /api/v1/resource matches ✓\n     * Authorization: hasRole(\"ADMIN\") ✓\n     * Result: Allowed → Passed to controller\n     * Response: HTTP 200 OK, resource created\n     * </pre>\n     *\n     * <h4>Example 3: Create Resource as USER</h4>\n     * <pre>\n     * POST /api/v1/resource\n     * JWT token with USER role included\n     *\n     * Rule Check 1: \"/error\" and \"/api/v1/auth/**\" don't match\n     * Rule Check 2: POST /api/v1/resource matches ✓\n     * Authorization: hasRole(\"ADMIN\") ✗ (user is USER, not ADMIN)\n     * Result: Denied -> accessDeniedHandler triggered\n     * Response: HTTP 403 Forbidden, custom error message\n     * </pre>\n     *\n     * <h4>Example 4: Access Protected Endpoint (Any Auth User)</h4>\n     * <pre>\n     * GET /api/v1/data\n     * JWT token with USER role included\n     *\n     * Rule Check 1 & 2: Don't match\n     * Rule Check 3: anyRequest() matches ✓\n     * Authorization: authenticated() ✓ (token is valid)\n     * Result: Allowed → Passed to controller\n     * Response: HTTP 200 OK\n     * </pre>\n     *\n     * <h3>Adding New Authorization Rules</h3>\n     * To add a new rule:\n     * <pre>\n     * // Only users with DELETE privilege\n     * .requestMatchers(HttpMethod.DELETE, \"/api/v1/resource/**\")\n     *     .hasAuthority(\"USER_DELETE\")\n     * \n     * // OR using @PreAuthorize on controller method:\n     * \n     * @PreAuthorize(\"hasAuthority('USER_DELETE')\")\n     * @DeleteMapping(\"/api/v1/resource/{id}\")\n     * public ResponseEntity<Void> deleteResource(@PathVariable String id) { ... }\n     * </pre>\n     *\n     * @param http Spring Security's {@link HttpSecurity} object for configuration\n     * @return {@link SecurityFilterChain} configured with all rules and filters\n     * @throws Exception if configuration fails\n     *\n     * @see JwtAuthenticationFilter - Validates JWT on every request\n     * @see Http401UnauthorizedEntryPoint - Handles missing/invalid JWT\n     * @see CustomAccessDeniedHandler - Handles insufficient permissions\n     * @see org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity\n     */\n    @Bean\n    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {\n        // STEP 1: Disable CSRF protection (not needed for stateless JWT-based REST APIs)\n        http.csrf(AbstractHttpConfigurer::disable)\n                // STEP 2: Configure exception handlers for authentication/authorization failures\n                .exceptionHandling(exception -> exception\n                        // Return HTTP 401 with custom JSON error when JWT invalid/expired\n                        .authenticationEntryPoint(unauthorizedEntryPoint)\n                        // Return HTTP 403 with custom JSON error when user lacks permission\n                        .accessDeniedHandler(accessDeniedHandler))\n                // STEP 3: Define authorization rules (top-to-bottom evaluation, first match wins)\n                .authorizeHttpRequests(request ->\n                        request\n                                // Rule 1: Public endpoints (no authentication required)\n                                .requestMatchers(\"/error\", \"/api/v1/auth/**\").permitAll()\n                                // Rule 2: Admin-only resource creation\n                                .requestMatchers(HttpMethod.POST, \"/api/v1/resource\").hasRole(\"ADMIN\")\n                                // Rule 3: Catch-all (all other endpoints require authentication)\n                                .anyRequest().authenticated())\n                // STEP 4: Use stateless session policy (no server-side sessions)\n                // Each request is independent; state is in JWT token only\n                .sessionManagement(manager -> manager.sessionCreationPolicy(STATELESS))\n                // STEP 5: Set the authentication provider (for login credential verification)\n                .authenticationProvider(authenticationProvider)\n                // STEP 6: Add JWT filter BEFORE the default authentication filter\n                // This ensures JWT is extracted and validated on every request\n                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);\n        \n        return http.build();\n    }\n}
+ * @see JwtAuthenticationFilter - Validates JWT tokens on each request
+ * @see ApplicationSecurityConfig - Provides authentication beans (UserDetailsService, PasswordEncoder)
+ * @see Http401UnauthorizedEntryPoint - Handles 401 responses (not authenticated)
+ * @see CustomAccessDeniedHandler - Handles 403 responses (not authorized)
+ */
+@Configuration
+@EnableWebSecurity
+@RequiredArgsConstructor
+@EnableMethodSecurity
+public class SecurityConfiguration {
+
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final AuthenticationProvider authenticationProvider;
+    private final Http401UnauthorizedEntryPoint unauthorizedEntryPoint;
+    private final CustomAccessDeniedHandler accessDeniedHandler;
+
+    /**
+     * Configures the Spring Security filter chain and authorization rules for the REST API.
+     *
+     * <p>This method sets up six key steps for request filtering and authorization:</p>
+     * <ol>
+     *   <li>Disable CSRF protection (not needed for stateless JWT REST APIs)</li>
+     *   <li>Configure 401/403 exception handlers to return JSON error responses</li>
+     *   <li>Define HTTP authorization rules (public, admin-only, and authenticated endpoints)</li>
+     *   <li>Use STATELESS session management (JWT-based, no server-side sessions)</li>
+     *   <li>Set authentication provider for password verification during login</li>
+     *   <li>Add JWT filter before the default authentication filter</li>
+     * </ol>
+     *
+     * <p><b>Authorization Rules (evaluated top-to-bottom):</b></p>
+     * <ul>
+     *   <li>/error, /api/v1/auth/** - permitAll() (public endpoints)</li>
+     *   <li>POST /api/v1/resource - hasRole("ADMIN") (admin-only endpoint)</li>
+     *   <li>All others - authenticated() (requires valid JWT token)</li>
+     * </ul>
+     *
+     * @param http Spring Security's HttpSecurity configuration builder
+     * @return SecurityFilterChain with all configured rules and filters
+     * @throws Exception if any configuration step fails
+     * @see JwtAuthenticationFilter - Extracts and validates JWT on every request
+     * @see Http401UnauthorizedEntryPoint - Handles 401 when JWT missing or invalid
+     * @see CustomAccessDeniedHandler - Handles 403 when user lacks required role
+     * @see ApplicationSecurityConfig - Provides authentication beans
+     * @see AuthenticationController - Login/register endpoints that use this configuration
+     */
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        // STEP 1: Disable CSRF protection (not needed for stateless JWT-based REST APIs)
+        http.csrf(AbstractHttpConfigurer::disable)
+                // STEP 2: Configure exception handlers for authentication/authorization failures
+                .exceptionHandling(exception -> exception
+                        // Return HTTP 401 with custom JSON error when JWT invalid/expired
+                        .authenticationEntryPoint(unauthorizedEntryPoint)
+                        // Return HTTP 403 with custom JSON error when user lacks permission
+                        .accessDeniedHandler(accessDeniedHandler))
+                // STEP 3: Define authorization rules (top-to-bottom evaluation, first match wins)
+                .authorizeHttpRequests(request ->
+                        request
+                                // Rule 1: Public endpoints (no authentication required)
+                                .requestMatchers("/error", "/api/v1/auth/**").permitAll()
+                                // Rule 2: Admin-only resource creation
+                                .requestMatchers(HttpMethod.POST, "/api/v1/resource").hasRole("ADMIN")
+                                // Rule 3: Catch-all (all other endpoints require authentication)
+                                .anyRequest().authenticated())
+                // STEP 4: Use stateless session policy (no server-side sessions)
+                // Each request is independent; state is in JWT token only
+                .sessionManagement(manager -> manager.sessionCreationPolicy(STATELESS))
+                // STEP 5: Set the authentication provider (for login credential verification)
+                .authenticationProvider(authenticationProvider)
+                // STEP 6: Add JWT filter BEFORE the default authentication filter
+                // This ensures JWT is extracted and validated on every request
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+}
