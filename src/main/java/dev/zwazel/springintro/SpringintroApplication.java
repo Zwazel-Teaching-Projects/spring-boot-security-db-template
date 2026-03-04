@@ -1,10 +1,15 @@
 package dev.zwazel.springintro;
 
+import dev.zwazel.springintro.security.Role;
 import dev.zwazel.springintro.security.auth.AuthenticationController;
 import dev.zwazel.springintro.security.config.ApplicationSecurityConfig;
 import dev.zwazel.springintro.security.config.SecurityConfiguration;
+import dev.zwazel.springintro.user.User;
+import dev.zwazel.springintro.user.UserRepository;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
 
 /**
  * Main entry point for the Spring Boot application.
@@ -153,4 +158,25 @@ public class SpringintroApplication {
         SpringApplication.run(SpringintroApplication.class, args);
     }
 
+    /**
+     * Runs at start up and creates a new user and an Admin and stores it in the DB.
+     *
+     * @param repository User Repository to interact with the Database. Dependency Injected by Spring.
+     */
+    @Bean
+    CommandLineRunner runner(UserRepository repository) {
+        return args -> {
+            User user = new User();
+            user.setEmail("student@example.com");
+            user.setPassword("StrongP@ssw0rd!");
+            user.setRole(Role.USER);
+            repository.save(user);
+
+            User admin = new User();
+            admin.setEmail("admin@example.com");
+            admin.setPassword("StrongP@ssw0rd!");
+            admin.setRole(Role.ADMIN);
+            repository.save(admin);
+        };
+    }
 }
