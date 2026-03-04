@@ -166,17 +166,30 @@ public class SpringintroApplication {
     @Bean
     CommandLineRunner runner(UserRepository repository) {
         return args -> {
-            User user = new User();
-            user.setEmail("student@example.com");
-            user.setPassword("StrongP@ssw0rd!");
-            user.setRole(Role.USER);
-            repository.save(user);
+            String superStrongPassword = "StrongP@ssw0rd!";
+            String userMail = "student@example.com";
+            if (repository.findUserByEmail(userMail).isEmpty()) {
+                System.out.println("Inserting User into DB...");
+                User user = new User();
+                user.setEmail(userMail);
+                user.setPassword(superStrongPassword);
+                user.setRole(Role.USER);
+                repository.save(user);
+            } else {
+                System.out.println("User already exists, skipping...");
+            }
 
-            User admin = new User();
-            admin.setEmail("admin@example.com");
-            admin.setPassword("StrongP@ssw0rd!");
-            admin.setRole(Role.ADMIN);
-            repository.save(admin);
+            String adminMail = "admin@example.com";
+            if (repository.findUserByEmail(adminMail).isEmpty()) {
+                System.out.println("Inserting Admin into DB...");
+                User admin = new User();
+                admin.setEmail(adminMail);
+                admin.setPassword(superStrongPassword);
+                admin.setRole(Role.ADMIN);
+                repository.save(admin);
+            } else {
+                System.out.println("Admin already exists, skipping...");
+            }
         };
     }
 }
