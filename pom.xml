@@ -8,11 +8,11 @@
         <version>4.0.3</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>dev.zwazel</groupId>
-    <artifactId>springintro</artifactId>
+    <groupId>com.example</groupId>
+    <artifactId>spring-boot-security-db-demplate</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>springintro</name>
-    <description>springintro</description>
+    <name>Spring Boot Security DB Template</name>
+    <description>A Spring Boot Template with Authorization</description>
     <url/>
     <licenses>
         <license/>
