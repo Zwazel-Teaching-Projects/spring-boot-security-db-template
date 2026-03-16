@@ -16,8 +16,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.List;
-
 import static org.springframework.security.config.http.SessionCreationPolicy.STATELESS;
 
 /**
@@ -96,7 +94,7 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(request ->
                         request
                                 // Rule 1: Public endpoints (no authentication required)
-                                .requestMatchers("/error", "/api/v1/auth/**").permitAll()
+                                .requestMatchers("/error", "/api/v1/auth/**", "/chat", "/chat/**").permitAll()
                                 // Rule 2: Admin-only resource creation
                                 .requestMatchers(HttpMethod.POST, "/api/v1/resource").hasRole("ADMIN")
                                 // Rule 3: Catch-all (all other endpoints require authentication)
@@ -116,9 +114,9 @@ public class SecurityConfiguration {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        configuration.setAllowedOrigins(CorsConfigurationValues.ALLOWED_ORIGINS);
+        configuration.setAllowedMethods(CorsConfigurationValues.ALLOWED_METHODS);
+        configuration.setAllowedHeaders(CorsConfigurationValues.ALLOWED_HEADERS);
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
