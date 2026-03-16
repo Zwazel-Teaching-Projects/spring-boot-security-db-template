@@ -9,7 +9,7 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example</groupId>
-    <artifactId>spring-boot-security-db-demplate</artifactId>
+    <artifactId>spring-boot-security-db-template</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>Spring Boot Security DB Template</name>
     <description>A Spring Boot Template with Authorization</description>
