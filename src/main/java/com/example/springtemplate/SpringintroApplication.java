@@ -168,7 +168,7 @@ public class SpringintroApplication {
     CommandLineRunner runner(UserRepository repository, PasswordEncoder passwordEncoder) {
         return args -> {
             String superStrongPassword = "StrongP@ssw0rd!";
-            String userMail = "student@example.com";
+            String userMail = "user@example.com";
             if (repository.findUserByEmail(userMail).isEmpty()) {
                 System.out.println("Inserting User into DB...");
                 User user = new User();
